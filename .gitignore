@@ -1,0 +1,56 @@
+# ====================
+# IDE / Editor
+# ====================
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+*.swp
+*.swo
+
+# ====================
+# OS files
+# ====================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ====================
+# Logs
+# ====================
+*.log
+
+# ====================
+# Python
+# ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ====================
+# Environment
+# ====================
+.env
+.env.local
+.env.*.local
+
+# ====================
+# Project specific
+# ====================
+.task_progress.md
+.vite/
+api-docs.json
+
+# ====================
+# AI Worker - 具体 AI 任务处理代码（不上传）
+# ====================
+ai-worker/avatar_generate/
+ai-worker/text2text/
+ai-worker/avtar/
+ai-worker/uploads/

@@ -51,6 +51,6 @@ api-docs.json
 # AI Worker - 具体 AI 任务处理代码（不上传）
 # ====================
 ai-worker/avatar_generate/
-ai-worker/text2text/
+ai-worker/text2text/_pycache_/
 ai-worker/avtar/
 ai-worker/uploads/

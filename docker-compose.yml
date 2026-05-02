@@ -1,0 +1,63 @@
+version: "3.8"
+
+# ============================================================
+# AI Supermarket — Docker 基础设施
+# 只需一条命令，即可启动 MySQL + Redis！
+#
+# 使用方法：
+#   docker-compose up -d          # 后台启动
+#   docker-compose down           # 停止并删除容器
+#   docker-compose logs -f        # 查看日志
+# ============================================================
+
+services:
+  # ---------- MySQL 数据库 ----------
+  mysql:
+    image: mysql:8.0
+    container_name: ai-supermarket-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      # root 密码
+      MYSQL_ROOT_PASSWORD: root123456
+      # 容器启动时自动创建的数据库
+      MYSQL_DATABASE: ai_supermarket
+      # 字符集
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    volumes:
+      # 数据持久化（容器删除后数据不丢失）
+      - mysql-data:/var/lib/mysql
+      # 自动导入建表脚本（首次启动时执行）
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------- Redis 缓存 + 任务队列 ----------
+  redis:
+    image: redis:7-alpine
+    container_name: ai-supermarket-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      # 数据持久化
+      - redis-data:/data
+    # 可选：如果需要密码，取消下面注释
+    # command: redis-server --requirepass yourpassword
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+# ---------- 数据卷声明 ----------
+volumes:
+  mysql-data:
+    name: ai-supermarket-mysql-data
+  redis-data:
+    name: ai-supermarket-redis-data

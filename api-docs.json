@@ -1,0 +1,269 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AI Digital Human Video SaaS API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com"
+    }
+  ],
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "summary": "用户注册",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              },
+              "example": {
+                "username": "testuser",
+                "email": "test@example.com",
+                "password": "123456"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "注册成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "msg": "success",
+                  "data": {
+                    "user_id": 1001
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "用户登录",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "example": {
+                "username": "testuser",
+                "password": "123456"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "msg": "success",
+                  "data": {
+                    "token": "jwt_token_example",
+                    "user_id": 1001
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/task/create": {
+      "post": {
+        "summary": "创建AI生成任务",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskRequest"
+              },
+              "example": {
+                "task_type": "video_generate",
+                "params": {
+                  "prompt": "一个数字人播报新闻",
+                  "avatar_id": "avatar_001",
+                  "voice": "female_cn",
+                  "resolution": "1080p",
+                  "duration": 30
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "任务创建成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "msg": "success",
+                  "data": {
+                    "task_id": 5001,
+                    "task_status": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/task/{task_id}": {
+      "get": {
+        "summary": "查询任务进度",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example": 5001
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "msg": "success",
+                  "data": {
+                    "task_id": 5001,
+                    "task_status": 1,
+                    "progress": 65,
+                    "error_msg": null
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/task/{task_id}/result": {
+      "get": {
+        "summary": "获取任务结果视频链接",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "example": 5001
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 0,
+                  "msg": "success",
+                  "data": {
+                    "task_id": 5001,
+                    "resources": [
+                      {
+                        "resource_type": "video",
+                        "resource_url": "https://cdn.example.com/video/xxx.mp4",
+                        "cover_url": "https://cdn.example.com/video/cover.jpg",
+                        "duration": 30
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RegisterRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": ["username", "password"]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": ["username", "password"]
+      },
+      "CreateTaskRequest": {
+        "type": "object",
+        "properties": {
+          "task_type": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": ["task_type", "params"]
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

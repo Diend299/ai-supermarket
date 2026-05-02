@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.AiTaskMapper">
+
+    <resultMap id="AiTaskResultMap" type="com.example.demo.entity.AiTask">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="taskType" column="task_type"/>
+        <result property="taskStatus" column="task_status"/>
+        <result property="params" column="params"/>
+        <result property="progress" column="progress"/>
+        <result property="errorMsg" column="error_msg"/>
+        <result property="consumePoints" column="consume_points"/>
+        <result property="consumeBalance" column="consume_balance"/>
+        <result property="startedAt" column="started_at"/>
+        <result property="finishedAt" column="finished_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findById" resultMap="AiTaskResultMap">
+        SELECT * FROM `ai_task` WHERE id = #{id}
+    </select>
+
+    <select id="findByUserId" resultMap="AiTaskResultMap">
+        SELECT * FROM `ai_task` WHERE user_id = #{userId} ORDER BY created_at DESC
+    </select>
+
+    <select id="findByStatus" resultMap="AiTaskResultMap">
+        SELECT * FROM `ai_task` WHERE task_status = #{status} ORDER BY created_at ASC
+    </select>
+
+    <insert id="insert" parameterType="com.example.demo.entity.AiTask" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `ai_task` (user_id, task_type, task_status, params, progress,
+                               error_msg, consume_points, consume_balance)
+        VALUES (#{userId}, #{taskType}, #{taskStatus}, #{params}, #{progress},
+                #{errorMsg}, #{consumePoints}, #{consumeBalance})
+    </insert>
+
+    <update id="updateStatus" parameterType="com.example.demo.entity.AiTask">
+        UPDATE `ai_task`
+        SET task_status = #{taskStatus},
+            progress = #{progress},
+            error_msg = #{errorMsg},
+            <if test="startedAt != null">started_at = #{startedAt},</if>
+            <if test="finishedAt != null">finished_at = #{finishedAt},</if>
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateProgress">
+        UPDATE `ai_task` SET progress = #{progress}, updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+</mapper>

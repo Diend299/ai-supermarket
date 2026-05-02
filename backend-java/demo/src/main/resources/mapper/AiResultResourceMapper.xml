@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.AiResultResourceMapper">
+
+    <resultMap id="AiResultResourceResultMap" type="com.example.demo.entity.AiResultResource">
+        <id property="id" column="id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="resourceType" column="resource_type"/>
+        <result property="resourceUrl" column="resource_url"/>
+        <result property="contentText" column="content_text"/>
+        <result property="coverUrl" column="cover_url"/>
+        <result property="duration" column="duration"/>
+        <result property="fileSize" column="file_size"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="findByTaskId" resultMap="AiResultResourceResultMap">
+        SELECT * FROM `ai_result_resource` WHERE task_id = #{taskId} AND status = 1
+    </select>
+
+    <insert id="insert" parameterType="com.example.demo.entity.AiResultResource" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `ai_result_resource` (task_id, resource_type, resource_url, cover_url, duration, file_size)
+        VALUES (#{taskId}, #{resourceType}, #{resourceUrl}, #{coverUrl}, #{duration}, #{fileSize})
+    </insert>
+
+</mapper>

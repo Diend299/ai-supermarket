@@ -33,6 +33,11 @@ const routes = [
         path: '/avatar',
         name: 'Avatar',
         component: () => import('@/views/Avatar.vue')
+      },
+      {
+        path: '/multimedia-workbench',
+        name: 'MultimediaWorkbench',
+        component: () => import('@/views/MultimediaWorkbench.vue')
       }
     ]
   }

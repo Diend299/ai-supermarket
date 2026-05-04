@@ -52,5 +52,7 @@ api-docs.json
 # ====================
 ai-worker/avatar_generate/
 ai-worker/text2text/_pycache_/
-ai-worker/avtar/
+ai-worker/avatar/
 ai-worker/uploads/
+ai-worker/GPT-SoVITS-v2pro/
+ai-worker/GPT-SoVITS-v2pro/*.*

@@ -58,6 +58,8 @@ class DatabaseClient:
         error_msg: str = None,
         result_text: str = None,
         result_video_url: str = None,
+        result_audio_url: str = None,
+        result_audio_size: int = None,
     ):
         """
         更新任务状态
@@ -67,6 +69,8 @@ class DatabaseClient:
         :param error_msg: 错误信息
         :param result_text: 生成的文本结果
         :param result_video_url: 生成的视频URL
+        :param result_audio_url: 生成的音频URL
+        :param result_audio_size: 音频文件大小（字节）
         """
         self._ensure_connection()
         now = datetime.now()
@@ -115,6 +119,15 @@ class DatabaseClient:
                     """INSERT INTO `ai_result_resource` (task_id, resource_type, resource_url, content_text)
                        VALUES (%s, %s, %s, %s)""",
                     (task_id, "video", result_video_url, ""),
+                )
+
+        # 如果生成成功且有音频URL，写入 ai_result_resource 表
+        if status == 2 and result_audio_url:
+            with self.connection.cursor() as cursor:
+                cursor.execute(
+                    """INSERT INTO `ai_result_resource` (task_id, resource_type, resource_url, file_size)
+                       VALUES (%s, %s, %s, %s)""",
+                    (task_id, "audio", result_audio_url, result_audio_size),
                 )
 
         self.connection.commit()

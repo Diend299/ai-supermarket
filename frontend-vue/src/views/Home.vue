@@ -123,7 +123,7 @@ const navigateTo = (item: { id: string; route?: string }) => {
 const workbenchItems = [
   { id: 'dashboard', name: '今日任务', icon: '📋', route: '/' },
   { id: 'reports', name: '数据看板', icon: '📊' },
-  { id: 'quickstart', name: '快速应用', icon: '⚡' },
+  { id: 'multimedia', name: '多媒体工作台', icon: '🎛️', route: '/multimedia-workbench' },
   { id: 'messages', name: '消息中心', icon: '💬' }
 ]
 

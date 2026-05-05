@@ -56,7 +56,13 @@ class AiWorker:
             from tts_generate.process import process_task
             process_task(task_data)
 
+        elif task_type == "wav2lip_generate":
+            # 导入 wav2lip_generate 模块处理
+            from wav2lip_generate.process import process_task
+            process_task(task_data)
+
         else:
+
             # 未知类型，标记为失败
             print(f"[Worker] 未知任务类型: {task_type}")
             task_id = task_data.get("taskId")

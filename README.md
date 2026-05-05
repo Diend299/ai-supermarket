@@ -1,18 +1,21 @@
 # 🏪 AI Supermarket — 多Agent协同式AI企业运营平台
 
-> **让AI像超市一样触手可及** — 开箱即用的智能文案创作平台
+> **让AI像超市一样触手可及** — 开箱即用的一站式AI内容创作平台
 
 ---
 
 ## 📦 项目简介
 
-本项目是一个基于 **Spring Boot + Vue 3 + Python AI Worker** 的智能文案创作平台，核心功能包括：
+本项目是一个基于 **Spring Boot + Vue 3 + Python AI Worker** 的一站式AI内容创作平台，核心功能包括：
 
-- ✅ **AI文案创作** 🎯 — 输入主题，调用 DeepSeek API 自动生成营销文案（text2text 功能）
-- ✅ **数字人视频** 👤 — （开发中）上传照片合成数字人视频
+- ✅ **AI文案创作** 🎯 — 输入主题，调用 DeepSeek API 自动生成营销文案（text2text）
+- ✅ **语音合成（TTS）** 🎤 — 将文本转化为自然语音，支持多种语音风格
+- ✅ **数字人视频生成** 👤 — 使用 Wav2Lip 技术，上传音频驱动数字人生成视频
+- ✅ **头像/形象生成** 🖼️ — AI 生成数字人形象
 - ✅ **任务队列** ⏳ — 基于 Redis 的异步任务处理，提交即返回
 - ✅ **实时推送** 🔄 — SSE 实时推送任务进度，无需手动刷新
 - ✅ **用户系统** 🔐 — 注册登录 + JWT 鉴权
+- ✅ **API 文档** 📋 — 符合 OpenAPI 3.0 规范，支持导入 Apifox 等工具
 
 ---
 
@@ -20,12 +23,13 @@
 
 | 层级 | 技术 | 说明 |
 |------|------|------|
-| 🖥️ **后端** | Java 17 + Spring Boot 3.x | REST API、鉴权、任务管理 |
+| 🖥️ **后端** | Java 17 + Spring Boot 3.x | REST API、鉴权、任务管理、SSE推送 |
 | 🗄️ **数据库** | MySQL 8.0 | 用户数据、任务记录、生成结果 |
-| ⚡ **缓存/队列** | Redis 7 | 任务队列 + 消息通知 |
-| 🎨 **前端** | Vue 3 + TypeScript + Vite | 用户界面 |
-| 🤖 **AI Worker** | Python 3.11+ | 调用 DeepSeek API 进行文本生成 |
+| ⚡ **缓存/队列** | Redis 7 | 任务队列 + 消息通知（Pub/Sub）|
+| 🎨 **前端** | Vue 3 + TypeScript + Vite + Element Plus | 用户界面 |
+| 🤖 **AI Worker** | Python 3.11+ | 调用 DeepSeek API、GPT-SoVITS、Wav2Lip |
 | 🐳 **部署** | Docker / Docker Compose | 一键启动基础设施 |
+| 📋 **API 文档** | OpenAPI 3.0 (JSON) | 导入 Apifox 调试接口 |
 
 ---
 
@@ -192,6 +196,8 @@ ai-supermarket/
 │   │   └── utils/              # 工具函数
 │   └── package.json
 │
+├── api-docs.json               # 📋 OpenAPI 3.0 规范文件（可导入 Apifox）
+│
 ├── ai-worker/                  # 🤖 AI Worker（Python）
 │   ├── main.py                 # 主循环（任务分发）
 │   ├── config.py               # 配置文件
@@ -199,12 +205,59 @@ ai-supermarket/
 │   ├── redis_client.py         # Redis 队列操作
 │   ├── .env                    # ⚠️ 环境变量（API Key 等）
 │   ├── requirements.txt        # Python 依赖
-│   └── text2text/              # 📝 文生文模块（核心功能）
-│       ├── __init__.py
-│       └── test.py             # 调用 DeepSeek API 生成文案
+│   ├── text2text/              # 📝 文生文模块 — 调用 DeepSeek API
+│   │   ├── __init__.py
+│   │   └── test.py
+│   ├── tts_generate/           # 🎤 语音合成模块 — GPT-SoVITS
+│   │   ├── __init__.py
+│   │   └── process.py
+│   ├── wav2lip_generate/       # 👤 数字人生成模块 — Wav2Lip
+│   │   ├── __init__.py
+│   │   └── process.py
+│   ├── avatar_generate/        # 🖼️ 头像生成模块
+│   │   ├── __init__.py
+│   │   └── process.py
+│   └── avatar/                 # 数字人模型数据
 │
 └── .task_progress.md           # 开发进度（可忽略）
 ```
+
+---
+
+## 📋 API 文档（Apifox 导入说明）
+
+项目根目录下的 [`api-docs.json`](./api-docs.json) 是符合 **OpenAPI 3.0** 规范的 API 文档文件，可以直接导入 [Apifox](https://apifox.com/) 等 API 调试工具。
+
+### 接口总览
+
+| 分组 | 路径 | 方法 | 说明 |
+|------|------|------|------|
+| 🔐 **用户认证** | `/api/auth/register` | POST | 用户注册 |
+| | `/api/auth/login` | POST | 用户登录，返回 JWT Token |
+| 🤖 **AI任务管理** | `/api/task/create` | POST | 创建AI生成任务 |
+| | `/api/task/list` | GET | 获取用户的任务列表 |
+| | `/api/task/{taskId}` | GET | 查询任务进度/详情 |
+| | `/api/task/{taskId}/result` | GET | 获取任务结果资源 |
+| | `/api/task/{taskId}/subscribe` | GET | SSE 订阅任务状态（实时推送）|
+| 👤 **数字人管理** | `/api/avatar/list` | GET | 获取可用数字人列表 |
+| 📁 **文件上传** | `/api/upload/audio` | POST | 上传音频文件（wav/mp3）|
+
+### 导入 Apifox
+
+1. 打开 Apifox，点击 **「导入」→「OpenAPI / Swagger」**
+2. 选择 **「文件导入」**，选中项目根目录的 `api-docs.json`
+3. 点击 **「确定」** 完成导入
+4. 导入后会自动生成所有接口，可直接在线调试
+
+### 通用接口规范
+
+- **基础地址**: `http://localhost:8080`
+- **响应格式**: 统一 JSON 包裹
+  ```json
+  { "code": 0, "msg": "success", "data": { ... } }
+  ```
+- **鉴权方式**: Bearer JWT Token（`Authorization: Bearer <token>`）
+- **任务状态码**: `0`=排队中, `1`=生成中, `2`=成功, `3`=失败
 
 ---
 

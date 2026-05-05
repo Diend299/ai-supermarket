@@ -45,7 +45,7 @@ build/
 # ====================
 .task_progress.md
 .vite/
-api-docs.json
+
 
 # ====================
 # AI Worker - 具体 AI 任务处理代码（不上传）

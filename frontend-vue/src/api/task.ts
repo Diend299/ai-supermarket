@@ -64,3 +64,31 @@ export const getTaskResult = (taskId: number): Promise<ApiResponse<TaskResultRes
 export const getUserTasks = (): Promise<ApiResponse<TaskListItem[]>> => {
   return request.get<any, ApiResponse<TaskListItem[]>>('/api/task/list')
 }
+
+export interface AvatarItem {
+  id: string
+  name: string
+  thumbnail: string
+  videos: string[]
+}
+
+export const listAvatars = (): Promise<ApiResponse<AvatarItem[]>> => {
+  return request.get<any, ApiResponse<AvatarItem[]>>('/api/avatar/list')
+}
+
+export interface UploadAudioResult {
+  url: string
+  fileName: string
+  size: number
+}
+
+export const uploadAudio = (file: File): Promise<ApiResponse<UploadAudioResult>> => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post<any, ApiResponse<UploadAudioResult>>('/api/upload/audio', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
+
+

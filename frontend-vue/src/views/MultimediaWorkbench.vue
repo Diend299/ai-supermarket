@@ -223,7 +223,11 @@
                   </svg>
                   下载音频
                 </button>
+                <button class="action-btn primary" @click="sendToAvatar">
+                  🎬 生成数字人
+                </button>
               </div>
+
             </div>
 
             <div class="error-msg" v-if="ttsTaskStatus === 3 && ttsErrorMsg">
@@ -236,9 +240,194 @@
             </div>
           </div>
         </div>
+
+        <!-- 数字人 Tab -->
+        <div v-if="activeTab === 'avatar'" class="tab-content">
+          <div class="input-card">
+            <div class="card-header">
+              <div class="header-title">
+                <svg viewBox="0 0 24 24" class="header-icon" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                </svg>
+                <h3>AI 数字人生成</h3>
+              </div>
+              <span class="badge">Wav2Lip</span>
+            </div>
+
+            <!-- 数字人形象选择 -->
+            <div class="form-group">
+              <label>数字人形象</label>
+              <div class="avatar-selector">
+                <div
+                  v-for="av in avatarList"
+                  :key="av.id"
+                  class="avatar-option"
+                  :class="{ selected: selectedAvatar === av.id }"
+                  @click="selectedAvatar = av.id"
+                >
+                  <div class="avatar-thumb">
+                    <img
+                      v-if="av.thumbnail"
+                      :src="baseUrl + av.thumbnail"
+                      :alt="av.name"
+                      class="avatar-img"
+                    />
+                    <div v-else class="avatar-placeholder">{{ av.name.charAt(0).toUpperCase() }}</div>
+                  </div>
+                  <div class="avatar-name">{{ av.name }}</div>
+                  <div class="avatar-desc">{{ av.videos.length }} 个参考视频</div>
+                </div>
+              </div>
+            </div>
+
+
+            <!-- 音频来源 -->
+            <div class="form-group">
+              <label>音频来源</label>
+              <div class="audio-source-tabs">
+                <button
+                  class="source-tab"
+                  :class="{ active: avatarAudioMode === 'tts' }"
+                  @click="avatarAudioMode = 'tts'"
+                >🎤 当前TTS</button>
+                <button
+                  class="source-tab"
+                  :class="{ active: avatarAudioMode === 'history' }"
+                  @click="loadHistoryTtsTasks(); avatarAudioMode = 'history'"
+                >📋 历史任务</button>
+                <button
+                  class="source-tab"
+                  :class="{ active: avatarAudioMode === 'upload' }"
+                  @click="avatarAudioMode = 'upload'"
+                >📁 上传文件</button>
+              </div>
+
+              <!-- 模式1: 当前TTS -->
+              <div v-if="avatarAudioMode === 'tts'" class="audio-source-card" :class="{ empty: !avatarAudioPath }">
+                <svg viewBox="0 0 24 24" class="source-icon" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 18V5l12-2v13"></path>
+                  <circle cx="6" cy="18" r="3"></circle>
+                  <circle cx="18" cy="16" r="3"></circle>
+                </svg>
+                <div class="source-info" v-if="avatarAudioPath">
+                  <span class="source-label">已选择语音合成音频</span>
+                  <span class="source-hint">TTS 任务 #{{ avatarTaskIdRef }}</span>
+                </div>
+                <div class="source-info" v-else>
+                  <span class="source-label">暂无当前TTS音频</span>
+                  <span class="source-hint">请在语音 Tab 生成音频后点击"生成数字人"</span>
+                </div>
+                <button class="clear-btn" v-if="avatarAudioPath" @click="clearAvatarAudio">✕</button>
+              </div>
+
+              <!-- 模式2: 历史任务 -->
+              <div v-if="avatarAudioMode === 'history'" class="audio-source-card">
+                <svg viewBox="0 0 24 24" class="source-icon" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12,6 12,12 16,14"></polyline>
+                </svg>
+                <div class="source-info" v-if="historyTtsTasks.length > 0">
+                  <select v-model="selectedHistoryTaskId" class="history-select" @change="onHistoryTaskSelect">
+                    <option value="" disabled>-- 选择历史TTS任务 --</option>
+                    <option
+                      v-for="t in historyTtsTasks"
+                      :key="t.taskId"
+                      :value="t.taskId"
+                    >#{{ t.taskId }} - {{ t.createdAt }}</option>
+                  </select>
+                </div>
+                <div class="source-info" v-else>
+                  <span class="source-label">暂无可用的历史TTS任务</span>
+                  <span class="source-hint">请先在语音合成 Tab 生成音频</span>
+                </div>
+              </div>
+
+              <!-- 模式3: 上传文件 -->
+              <div v-if="avatarAudioMode === 'upload'" class="audio-source-card">
+                <svg viewBox="0 0 24 24" class="source-icon" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17,8 12,3 7,8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <div class="source-info" v-if="!uploadingAudio">
+                  <label class="upload-btn">
+                    <input type="file" accept=".wav,.mp3" @change="handleAudioUpload" hidden />
+                    {{ avatarAudioPath ? '已选择: ' + uploadedFileName : '点击选择音频文件 (wav/mp3)' }}
+                  </label>
+                </div>
+                <div class="source-info" v-else>
+                  <span class="source-label">上传中...</span>
+                </div>
+                <button class="clear-btn" v-if="avatarAudioPath && avatarAudioMode === 'upload'" @click="clearAvatarAudio">✕</button>
+              </div>
+            </div>
+
+
+            <button
+              class="submit-btn"
+              :disabled="avatarSubmitting || !avatarAudioPath"
+              @click="handleAvatarSubmit"
+            >
+              <span class="btn-icon">🎬</span>
+              <span v-if="!avatarSubmitting">生成数字人视频</span>
+              <span v-else>生成中...</span>
+            </button>
+          </div>
+
+          <div class="result-card" v-if="avatarShowResult">
+            <div class="card-header">
+              <div class="header-title">
+                <svg viewBox="0 0 24 24" class="header-icon" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                </svg>
+                <h3>生成结果</h3>
+              </div>
+              <span :class="['status-badge', avatarStatusClass]">
+                <span class="dot" :class="{ animate: avatarTaskStatus === 1 }"></span>
+                {{ avatarStatusText }}
+              </span>
+            </div>
+
+            <div class="progress-bar" v-if="avatarTaskStatus === 0 || avatarTaskStatus === 1">
+              <div class="progress-fill" :style="{ width: avatarProgress + '%' }"></div>
+            </div>
+
+            <div class="video-container" v-if="avatarTaskStatus === 2 && avatarVideoUrl">
+              <video
+                ref="avatarVideoPlayer"
+                :src="avatarVideoFullUrl"
+                controls
+                autoplay
+                class="video-player"
+              ></video>
+              <div class="result-actions">
+                <button class="action-btn secondary" @click="handleDownloadAvatarVideo">
+                  <svg viewBox="0 0 24 24" class="btn-icon-svg" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7,10 12,15 17,10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  下载视频
+                </button>
+              </div>
+            </div>
+
+            <div class="error-msg" v-if="avatarTaskStatus === 3 && avatarErrorMsg">
+              <svg viewBox="0 0 24 24" class="error-icon" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>{{ avatarErrorMsg }}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 右侧历史面板 -->
+
       <div class="right-panel">
         <div class="history-card">
           <div class="card-header">
@@ -308,14 +497,17 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
-import { createTask, getTaskDetail, getTaskResult, getUserTasks } from '@/api/task'
-import type { TaskListItem } from '@/api/task'
+import { createTask, getTaskDetail, getTaskResult, getUserTasks, listAvatars } from '@/api/task'
+import type { TaskListItem, AvatarItem } from '@/api/task'
+
 
 // ========== Tab 切换 ==========
 const tabs = [
   { id: 'text', icon: '📝', label: '文案创作' },
-  { id: 'tts', icon: '🔊', label: '语音合成' }
+  { id: 'tts', icon: '🔊', label: '语音合成' },
+  { id: 'avatar', icon: '🎬', label: '数字人' }
 ]
+
 const activeTab = ref('text')
 
 // ========== 工具函数 ==========
@@ -475,11 +667,231 @@ const handleDownloadAudio = () => {
   document.body.removeChild(a)
 }
 
+// 将TTS音频发送到数字人 Tab
+const sendToAvatar = () => {
+  if (ttsAudioUrl.value) {
+    avatarAudioPath.value = ttsAudioUrl.value
+    avatarTaskIdRef.value = String(currentTaskId.value || '')
+    activeTab.value = 'avatar'
+  }
+}
+
+
+// ========== 数字人列表 ==========
+const avatarList = ref<AvatarItem[]>([])
+
+const loadAvatars = async () => {
+  try {
+    const res = await listAvatars()
+    if (res.code === 0) {
+      const data = res.data
+      if (data && data.length > 0) {
+        avatarList.value = data
+        // 默认选中第一个
+        const found = data.find((a: AvatarItem) => a.id === selectedAvatar.value)
+        if (!found && data[0]) {
+          selectedAvatar.value = data[0].id
+        }
+      }
+    }
+  } catch (e) {
+    console.error('加载数字人列表失败:', e)
+  }
+}
+
+
+
+
+// ========== 数字人音频来源 ==========
+const avatarAudioMode = ref<'tts' | 'history' | 'upload'>('tts')
+const historyTtsTasks = ref<{ taskId: number; createdAt: string }[]>([])
+const selectedHistoryTaskId = ref<number | null>(null)
+const uploadingAudio = ref(false)
+const uploadedFileName = ref('')
+
+const loadHistoryTtsTasks = async () => {
+  try {
+    const res = await getUserTasks()
+    if (res.code === 0) {
+      const completed = res.data
+        .filter((t: TaskListItem) => t.taskType === 'tts_generate' && t.taskStatus === 2)
+        .map((t: TaskListItem) => ({ taskId: t.taskId, createdAt: new Date(t.createdAt).toLocaleString() }))
+        .sort((a, b) => b.taskId - a.taskId)
+      historyTtsTasks.value = completed
+    }
+  } catch (e) {
+    console.error('加载历史TTS任务失败:', e)
+  }
+}
+
+const onHistoryTaskSelect = async () => {
+  if (!selectedHistoryTaskId.value) return
+  try {
+    const res = await getTaskResult(selectedHistoryTaskId.value)
+    if (res.code === 0) {
+      const audioResource = res.data.resources.find((r: any) => r.resourceType === 'audio')
+      if (audioResource) {
+        avatarAudioPath.value = audioResource.resourceUrl
+        avatarTaskIdRef.value = String(selectedHistoryTaskId.value)
+      }
+    }
+  } catch (e) {
+    console.error('获取历史TTS音频失败:', e)
+  }
+}
+
+const handleAudioUpload = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  if (!input.files || input.files.length === 0) return
+  const file = input.files[0]
+  if (!file) return
+  uploadingAudio.value = true
+  uploadedFileName.value = file.name
+  try {
+    const { uploadAudio } = await import('@/api/task')
+    const res = await uploadAudio(file as File)
+
+    if (res.code === 0) {
+      avatarAudioPath.value = res.data.url
+      avatarTaskIdRef.value = 'upload'
+    } else {
+      alert('上传失败: ' + res.msg)
+    }
+  } catch (e: any) {
+    alert('上传失败: ' + (e.message || '网络错误'))
+  } finally {
+    uploadingAudio.value = false
+  }
+}
+
+// ========== 数字人生成 ==========
+const selectedAvatar = ref('asuka')
+
+
+const avatarAudioPath = ref('')
+const avatarTaskIdRef = ref('')
+const avatarSubmitting = ref(false)
+const avatarShowResult = ref(false)
+const avatarTaskStatus = ref(0)
+const avatarProgress = ref(0)
+const avatarVideoUrl = ref('')
+const avatarErrorMsg = ref('')
+const avatarVideoPlayer = ref<HTMLVideoElement | null>(null)
+
+const avatarStatusClass = computed(() => {
+  const map: Record<number, string> = { 0: 'pending', 1: 'processing', 2: 'success', 3: 'failed' }
+  return map[avatarTaskStatus.value] || ''
+})
+const avatarStatusText = computed(() => {
+  const map: Record<number, string> = { 0: '排队中', 1: '生成中', 2: '已完成', 3: '失败' }
+  return map[avatarTaskStatus.value] || ''
+})
+
+const avatarVideoFullUrl = computed(() => {
+  if (!avatarVideoUrl.value) return ''
+  return `${baseUrl}${avatarVideoUrl.value}`
+})
+
+const clearAvatarAudio = () => {
+  avatarAudioPath.value = ''
+  avatarTaskIdRef.value = ''
+}
+
+const handleAvatarSubmit = async () => {
+  if (!avatarAudioPath.value) return
+  avatarSubmitting.value = true
+  avatarShowResult.value = true
+  avatarTaskStatus.value = 0
+  avatarProgress.value = 0
+  avatarVideoUrl.value = ''
+  avatarErrorMsg.value = ''
+  try {
+    const res = await createTask({
+      taskType: 'wav2lip_generate',
+      params: {
+        audio_path: avatarAudioPath.value,
+        avatar: selectedAvatar.value
+      }
+    })
+    if (res.code === 0) {
+      currentTaskId.value = res.data.taskId
+      startAvatarPolling(res.data.taskId)
+      loadHistory()
+    } else {
+      throw new Error(res.msg || '创建任务失败')
+    }
+  } catch (e: any) {
+    avatarTaskStatus.value = 3
+    avatarErrorMsg.value = e.message || '网络错误'
+    avatarSubmitting.value = false
+  }
+}
+
+const startAvatarPolling = (taskId: number) => {
+  pollingTimer = setInterval(async () => {
+    try {
+      const res = await getTaskDetail(taskId)
+      if (res.code === 0) {
+        const data = res.data
+        avatarTaskStatus.value = data.taskStatus
+        avatarProgress.value = data.progress
+        if (data.taskStatus === 2) {
+          clearInterval(pollingTimer!)
+          pollingTimer = null
+          avatarSubmitting.value = false
+          await fetchAvatarResult(taskId)
+          loadHistory()
+        } else if (data.taskStatus === 3) {
+          clearInterval(pollingTimer!)
+          pollingTimer = null
+          avatarSubmitting.value = false
+          avatarErrorMsg.value = data.errorMsg || '生成失败'
+          loadHistory()
+        }
+      }
+    } catch (e) {
+      console.error('Avatar polling error:', e)
+    }
+  }, 2000)
+}
+
+const fetchAvatarResult = async (taskId: number) => {
+  try {
+    const res = await getTaskResult(taskId)
+    if (res.code === 0) {
+      const resources = res.data.resources
+      const videoResource = resources && resources.find((r: any) => r.resourceType === 'video')
+      if (videoResource) {
+        avatarVideoUrl.value = videoResource.resourceUrl
+      }
+      setTimeout(() => {
+        if (avatarVideoPlayer.value) {
+          avatarVideoPlayer.value.play().catch(() => {})
+        }
+      }, 300)
+    }
+  } catch (e) {
+    console.error('Fetch avatar result error:', e)
+  }
+}
+
+const handleDownloadAvatarVideo = () => {
+  const a = document.createElement('a')
+  a.href = avatarVideoFullUrl.value
+  a.download = `avatar_${currentTaskId.value}.mp4`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+}
+
 // ========== 通用 SSE / 轮询 ==========
+
 let eventSource: EventSource | null = null
 let pollingTimer: ReturnType<typeof setInterval> | null = null
 const currentTaskId = ref<number | null>(null)
-const currentTaskType = ref<'text' | 'tts'>('text')
+const currentTaskType = ref<'text' | 'tts' | 'avatar'>('text')
+
+
 
 const startSse = (taskId: number, type: 'text' | 'tts') => {
   closeSse()
@@ -643,8 +1055,10 @@ const activeFilter = ref('all')
 const historyFilters = [
   { id: 'all', label: '全部' },
   { id: 'text2text', label: '文案' },
-  { id: 'tts_generate', label: '语音' }
+  { id: 'tts_generate', label: '语音' },
+  { id: 'wav2lip_generate', label: '数字人' }
 ]
+
 
 const filteredHistory = computed(() => {
   if (activeFilter.value === 'all') return historyList.value
@@ -657,10 +1071,12 @@ const loadHistory = async () => {
     if (res.code === 0) {
       const typeLabels: Record<string, string> = {
         text2text: '📝 文案创作',
-        tts_generate: '🔊 语音合成'
+        tts_generate: '🔊 语音合成',
+        wav2lip_generate: '🎬 数字人'
       }
       historyList.value = res.data
-        .filter((t: TaskListItem) => t.taskType === 'text2text' || t.taskType === 'tts_generate')
+        .filter((t: TaskListItem) => t.taskType === 'text2text' || t.taskType === 'tts_generate' || t.taskType === 'wav2lip_generate')
+
         .map((t: TaskListItem) => ({
           taskId: t.taskId,
           taskType: t.taskType,
@@ -685,6 +1101,15 @@ const viewHistory = async (item: HistoryItem) => {
     textProgress.value = 0
     textErrorMsg.value = ''
     textResultText.value = ''
+    currentTaskType.value = 'text'
+  } else if (item.taskType === 'wav2lip_generate') {
+    activeTab.value = 'avatar'
+    avatarShowResult.value = true
+    avatarTaskStatus.value = 0
+    avatarProgress.value = 0
+    avatarErrorMsg.value = ''
+    avatarVideoUrl.value = ''
+    currentTaskType.value = 'tts'
   } else {
     activeTab.value = 'tts'
     ttsShowResult.value = true
@@ -692,10 +1117,10 @@ const viewHistory = async (item: HistoryItem) => {
     ttsProgress.value = 0
     ttsErrorMsg.value = ''
     ttsAudioUrl.value = ''
+    currentTaskType.value = 'tts'
   }
 
   currentTaskId.value = item.taskId
-  currentTaskType.value = item.taskType === 'text2text' ? 'text' : 'tts'
 
   try {
     const res = await getTaskDetail(item.taskId)
@@ -710,6 +1135,16 @@ const viewHistory = async (item: HistoryItem) => {
           textErrorMsg.value = data.errorMsg || '生成失败'
         } else {
           startPolling(item.taskId, 'text')
+        }
+      } else if (item.taskType === 'wav2lip_generate') {
+        avatarTaskStatus.value = data.taskStatus
+        avatarProgress.value = data.progress
+        if (data.taskStatus === 2) {
+          await fetchAvatarResult(item.taskId)
+        } else if (data.taskStatus === 3) {
+          avatarErrorMsg.value = data.errorMsg || '生成失败'
+        } else {
+          startAvatarPolling(item.taskId)
         }
       } else {
         ttsTaskStatus.value = data.taskStatus
@@ -727,6 +1162,9 @@ const viewHistory = async (item: HistoryItem) => {
     if (item.taskType === 'text2text') {
       textTaskStatus.value = 3
       textErrorMsg.value = e.message || '查询失败'
+    } else if (item.taskType === 'wav2lip_generate') {
+      avatarTaskStatus.value = 3
+      avatarErrorMsg.value = e.message || '查询失败'
     } else {
       ttsTaskStatus.value = 3
       ttsErrorMsg.value = e.message || '查询失败'
@@ -745,7 +1183,9 @@ const getStatusText = (status: number) => {
 
 onMounted(() => {
   loadHistory()
+  loadAvatars()
 })
+
 
 onUnmounted(() => {
   closeSse()
@@ -1236,8 +1676,228 @@ input[type="range"]:disabled::-webkit-slider-thumb {
   flex-shrink: 0;
 }
 
+/* Avatar Selector */
+.avatar-selector {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.avatar-option {
+  width: 140px;
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  background: #fafafa;
+}
+
+.avatar-option:hover {
+  border-color: #8b5cf6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+}
+
+.avatar-option.selected {
+  border-color: #8b5cf6;
+  background: linear-gradient(135deg, #f0f5ff, #f5f0ff);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.avatar-thumb {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 10px;
+  border: 3px solid #e5e7eb;
+}
+
+.avatar-option.selected .avatar-thumb {
+  border-color: #8b5cf6;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e1b4b;
+}
+
+.avatar-desc {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+/* Audio Source Tabs */
+.audio-source-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.source-tab {
+  flex: 1;
+  padding: 10px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: white;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.source-tab:hover {
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+}
+
+.source-tab.active {
+  border-color: #8b5cf6;
+  background: linear-gradient(135deg, #f0f5ff, #f5f0ff);
+  color: #8b5cf6;
+}
+
+.history-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #e8e4ff;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #374151;
+  background: white;
+  font-family: inherit;
+}
+
+.upload-btn {
+  display: inline-block;
+  padding: 10px 18px;
+  background: white;
+  border: 2px dashed #8b5cf6;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #8b5cf6;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  text-align: center;
+  width: 100%;
+}
+
+.upload-btn:hover {
+  background: #f0f5ff;
+}
+
+.avatar-placeholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #8b5cf6;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 auto 10px;
+}
+
+/* Audio Source Card */
+.audio-source-card {
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, #f0f5ff, #f5f0ff);
+  border: 1px solid #e8e4ff;
+  border-radius: 14px;
+}
+
+.audio-source-card.empty {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.source-icon {
+  width: 28px;
+  height: 28px;
+  color: #8b5cf6;
+  flex-shrink: 0;
+}
+
+.audio-source-card.empty .source-icon {
+  color: #9ca3af;
+}
+
+.source-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.source-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.source-hint {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.clear-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.06);
+  color: #6b7280;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.clear-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+/* Video Player */
+.video-container {
+  padding: 16px;
+  background: #111;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.video-player {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+  max-height: 480px;
+}
+
 /* History Filter */
 .history-filter {
+
   display: flex;
   gap: 8px;
   margin-bottom: 16px;

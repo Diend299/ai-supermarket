@@ -16,5 +16,15 @@ public class WebConfig implements WebMvcConfigurer {
                 .replace("backend-java/demo", "ai-worker/uploads/");
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:" + uploadPath);
+
+        // 映射 /avatar/** 到 ai-worker/avatar/Wav2Lip/avatars/ 目录
+        // 这样数字人缩略图可通过 http://localhost:8080/avatar/asuka/asuka.png 访问
+        String avatarPath = System.getProperty("user.dir")
+                .replace("backend-java\\demo", "ai-worker\\avatar\\Wav2Lip\\avatars\\")
+                .replace("backend-java/demo", "ai-worker/avatar/Wav2Lip/avatars/");
+        registry.addResourceHandler("/avatar/**")
+                .addResourceLocations("file:" + avatarPath);
     }
 }
+
+

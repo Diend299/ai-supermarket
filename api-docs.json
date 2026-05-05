@@ -1,0 +1,853 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AI 数字人视频 SaaS API",
+    "description": "AI Supermarket — AI 数字人视频生成平台的完整 RESTful API 文档\n\n## 概述\n\n提供用户认证、AI任务管理、数字人列表、文件上传等功能。\n\n## 接口通用规范\n\n- **基础路径**: `http://localhost:8080`\n- **响应格式**: 统一 JSON 包裹 `Result<T>`，结构为 `{ code: 0, msg: \"success\", data: T }`\n- **鉴权方式**: Bearer JWT Token，通过 `Authorization: Bearer <token>` 请求头传递\n- **任务状态码**:\n  - `0` = 排队中\n  - `1` = 生成中\n  - `2` = 成功\n  - `3` = 失败\n\n### 统一响应结构 `Result<T>`\n\n| 字段 | 类型 | 说明 |\n|------|------|------|\n| code | integer | 状态码：`0` 成功，`-1` 业务错误 |\n| msg  | string | 提示信息 |\n| data | T      | 业务数据 |",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "本地开发环境"
+    }
+  ],
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": ["用户认证"],
+        "summary": "用户注册",
+        "description": "使用用户名和密码注册新用户，可选填邮箱",
+        "operationId": "register",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              },
+              "example": {
+                "username": "testuser",
+                "email": "test@example.com",
+                "password": "123456"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "注册成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "msg": { "type": "string", "example": "success" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "userId": { "type": "integer", "example": 1001 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数校验失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "code": -1,
+                  "msg": "用户名不能为空",
+                  "data": null
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["用户认证"],
+        "summary": "用户登录",
+        "description": "使用用户名和密码登录，返回 JWT Token",
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "example": {
+                "username": "testuser",
+                "password": "123456"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "msg": { "type": "string", "example": "success" },
+                    "data": {
+                      "$ref": "#/components/schemas/LoginResponse"
+                    }
+                  }
+                },
+                "example": {
+                  "code": 0,
+                  "msg": "success",
+                  "data": {
+                    "token": "eyJhbGciOiJIUzI1NiJ9...",
+                    "userId": 1001
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/task/create": {
+      "post": {
+        "tags": ["AI任务管理"],
+        "summary": "创建AI生成任务",
+        "description": "创建AI任务（文案生成、语音合成、数字人视频生成等），任务创建后会异步执行",
+        "operationId": "createTask",
+        "security": [
+          { "BearerAuth": [] }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskRequest"
+              },
+              "example": {
+                "taskType": "video_generate",
+                "params": {
+                  "prompt": "一个数字人播报新闻",
+                  "avatarId": "asuka",
+                  "voice": "female_cn",
+                  "resolution": "1080p"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "任务创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "msg": { "type": "string", "example": "success" },
+                    "data": {
+                      "$ref": "#/components/schemas/TaskResponse"
+                    }
+                  }
+                },
+                "example": {
+                  "code": 0,
+                  "msg": "success",
+                  "data": {
+                    "taskId": 5001,
+                    "taskStatus": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/task/list": {
+      "get": {
+        "tags": ["AI任务管理"],
+        "summary": "获取用户的所有任务列表",
+        "description": "获取当前用户的所有AI任务列表，按创建时间倒序",
+        "operationId": "getUserTasks",
+        "security": [
+          { "BearerAuth": [] }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "msg": { "type": "string", "example": "success" },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TaskListResponse"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "code": 0,
+                  "msg": "success",
+                  "data": [
+                    {
+                      "taskId": 5001,
+                      "taskType": "video_generate",
+                      "taskStatus": 2,
+                      "progress": 100,
+                      "createdAt": "2026-05-05T10:00:00",
+                      "finishedAt": "2026-05-05T10:05:30"
+                    },
+                    {
+                      "taskId": 5000,
+                      "taskType": "text_generate",
+                      "taskStatus": 1,
+                      "progress": 50,
+                      "createdAt": "2026-05-05T09:30:00",
+                      "finishedAt": null
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/task/{taskId}": {
+      "get": {
+        "tags": ["AI任务管理"],
+        "summary": "查询任务进度/详情",
+        "description": "根据 taskId 查询单个任务的详细状态和进度",
+        "operationId": "getTaskDetail",
+        "security": [
+          { "BearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "description": "任务ID",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "example": 5001
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "msg": { "type": "string", "example": "success" },
+                    "data": {
+                      "$ref": "#/components/schemas/TaskDetailResponse"
+                    }
+                  }
+                },
+                "example": {
+                  "code": 0,
+                  "msg": "success",
+                  "data": {
+                    "taskId": 5001,
+                    "taskType": "video_generate",
+                    "taskStatus": 1,
+                    "progress": 65,
+                    "errorMsg": null,
+                    "createdAt": "2026-05-05T10:00:00",
+                    "finishedAt": null
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/task/{taskId}/result": {
+      "get": {
+        "tags": ["AI任务管理"],
+        "summary": "获取任务结果资源",
+        "description": "任务完成后，获取生成的结果资源列表（视频、音频、文本等）",
+        "operationId": "getTaskResult",
+        "security": [
+          { "BearerAuth": [] }
+        ],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "description": "任务ID",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "example": 5001
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "msg": { "type": "string", "example": "success" },
+                    "data": {
+                      "$ref": "#/components/schemas/TaskResultResponse"
+                    }
+                  }
+                },
+                "example": {
+                  "code": 0,
+                  "msg": "success",
+                  "data": {
+                    "taskId": 5001,
+                    "taskStatus": 2,
+                    "resources": [
+                      {
+                        "resourceType": "video",
+                        "resourceUrl": "http://localhost:8080/uploads/video/20260505/xxx.mp4",
+                        "contentText": null,
+                        "coverUrl": "http://localhost:8080/uploads/video/20260505/cover.jpg",
+                        "duration": 30
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/task/{taskId}/subscribe": {
+      "get": {
+        "tags": ["AI任务管理"],
+        "summary": "SSE 订阅任务状态",
+        "description": "通过 Server-Sent Events 实时监听任务状态变更（无需轮询）。\n\n**鉴权方式**：支持 Header 或 URL Query 传 token（因 EventSource 无法自定义 Header）\n\n**事件类型**:\n- `task-completed` — 任务完成 data: {\"taskId\":5001,\"status\":2,\"type\":\"completed\"}\n- `task-failed` — 任务失败 data: {\"taskId\":5001,\"status\":3,\"type\":\"failed\",\"errorMsg\":\"...\"}\n- `heartbeat` — 心跳保活（每10秒）",
+        "operationId": "subscribeTask",
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "description": "任务ID",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "example": 5001
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "description": "JWT Token（当无法设置 Authorization Header 时使用）",
+            "schema": {
+              "type": "string",
+              "example": "eyJhbGciOiJIUzI1NiJ9..."
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE 连接建立成功，持续推送事件",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "SSE 事件流"
+                },
+                "example": "event: heartbeat\ndata: \n\nevent: task-completed\ndata: {\"taskId\":5001,\"status\":2,\"type\":\"completed\"}\n"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/avatar/list": {
+      "get": {
+        "tags": ["数字人管理"],
+        "summary": "获取可用数字人列表",
+        "description": "自动扫描 ai-worker/avatar/Wav2Lip/avatars/ 目录下的数字人文件夹，返回每个数字人的 ID、名称、缩略图及参考视频列表",
+        "operationId": "listAvatars",
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AvatarItem"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "code": 0,
+                  "data": [
+                    {
+                      "id": "asuka",
+                      "name": "asuka",
+                      "thumbnail": "/avatar/asuka/asuka.png",
+                      "videos": ["asuka_demo.mp4"]
+                    },
+                    {
+                      "id": "default",
+                      "name": "default",
+                      "thumbnail": "/avatar/default/preview.png",
+                      "videos": ["default.mp4"]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/upload/audio": {
+      "post": {
+        "tags": ["文件上传"],
+        "summary": "上传音频文件",
+        "description": "上传 WAV 或 MP3 格式的音频文件，保存到 ai-worker/uploads/audio/ 目录下按日期分组的文件夹中",
+        "operationId": "uploadAudio",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "音频文件，仅支持 wav 和 mp3 格式"
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "上传成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 0 },
+                    "msg": { "type": "string", "example": "上传成功" },
+                    "data": {
+                      "$ref": "#/components/schemas/UploadAudioResult"
+                    }
+                  }
+                },
+                "example": {
+                  "code": 0,
+                  "msg": "上传成功",
+                  "data": {
+                    "url": "/uploads/audio/20260505/1746420000000_audio.wav",
+                    "fileName": "audio.wav",
+                    "size": 1048576
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "文件为空或格式不支持",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer", "example": 1 },
+                    "msg": { "type": "string", "example": "仅支持 wav 和 mp3 格式" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RegisterRequest": {
+        "type": "object",
+        "description": "注册请求",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "用户名",
+            "example": "testuser"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "邮箱（可选）",
+            "example": "test@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "密码",
+            "minLength": 6,
+            "example": "123456"
+          }
+        },
+        "required": ["username", "password"]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "description": "登录请求",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "用户名",
+            "example": "testuser"
+          },
+          "password": {
+            "type": "string",
+            "description": "密码",
+            "example": "123456"
+          }
+        },
+        "required": ["username", "password"]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "description": "登录响应",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "JWT Token，后续请求需在 Authorization Header 中携带",
+            "example": "eyJhbGciOiJIUzI1NiJ9..."
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "用户ID",
+            "example": 1001
+          }
+        }
+      },
+      "CreateTaskRequest": {
+        "type": "object",
+        "description": "创建AI任务请求",
+        "properties": {
+          "taskType": {
+            "type": "string",
+            "description": "任务类型，如 video_generate、text_generate、tts_generate、avatar_generate 等",
+            "example": "video_generate"
+          },
+          "params": {
+            "type": "object",
+            "description": "任务参数，根据 taskType 不同包含不同的字段",
+            "example": {
+              "prompt": "一个数字人播报新闻",
+              "avatarId": "asuka",
+              "voice": "female_cn",
+              "resolution": "1080p"
+            }
+          }
+        },
+        "required": ["taskType", "params"]
+      },
+      "TaskResponse": {
+        "type": "object",
+        "description": "创建任务返回的任务信息",
+        "properties": {
+          "taskId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "任务ID",
+            "example": 5001
+          },
+          "taskStatus": {
+            "type": "integer",
+            "description": "任务状态：0=排队中，1=生成中，2=成功，3=失败",
+            "example": 0
+          }
+        }
+      },
+      "TaskDetailResponse": {
+        "type": "object",
+        "description": "任务详情",
+        "properties": {
+          "taskId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "任务ID",
+            "example": 5001
+          },
+          "taskType": {
+            "type": "string",
+            "description": "任务类型",
+            "example": "video_generate"
+          },
+          "taskStatus": {
+            "type": "integer",
+            "description": "任务状态：0=排队中，1=生成中，2=成功，3=失败",
+            "example": 1
+          },
+          "progress": {
+            "type": "integer",
+            "description": "进度百分比（0-100）",
+            "example": 65
+          },
+          "errorMsg": {
+            "type": "string",
+            "nullable": true,
+            "description": "失败时的错误信息",
+            "example": null
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间",
+            "example": "2026-05-05T10:00:00"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "完成时间（未完成时为 null）",
+            "example": null
+          }
+        }
+      },
+      "TaskResultResponse": {
+        "type": "object",
+        "description": "任务结果资源",
+        "properties": {
+          "taskId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "任务ID",
+            "example": 5001
+          },
+          "taskStatus": {
+            "type": "integer",
+            "description": "任务状态",
+            "example": 2
+          },
+          "resources": {
+            "type": "array",
+            "description": "结果资源列表",
+            "items": {
+              "$ref": "#/components/schemas/ResourceItem"
+            }
+          }
+        }
+      },
+      "ResourceItem": {
+        "type": "object",
+        "description": "资源项",
+        "properties": {
+          "resourceType": {
+            "type": "string",
+            "description": "资源类型：video / image / audio / text",
+            "example": "video"
+          },
+          "resourceUrl": {
+            "type": "string",
+            "description": "资源访问URL",
+            "example": "http://localhost:8080/uploads/video/20260505/xxx.mp4"
+          },
+          "contentText": {
+            "type": "string",
+            "nullable": true,
+            "description": "文本内容（text类型资源使用）",
+            "example": null
+          },
+          "coverUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "封面图URL（视频资源使用）",
+            "example": "http://localhost:8080/uploads/video/20260505/cover.jpg"
+          },
+          "duration": {
+            "type": "integer",
+            "nullable": true,
+            "description": "时长（秒，音视频资源使用）",
+            "example": 30
+          }
+        }
+      },
+      "TaskListResponse": {
+        "type": "object",
+        "description": "任务列表项",
+        "properties": {
+          "taskId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "任务ID",
+            "example": 5001
+          },
+          "taskType": {
+            "type": "string",
+            "description": "任务类型",
+            "example": "video_generate"
+          },
+          "taskStatus": {
+            "type": "integer",
+            "description": "任务状态：0=排队中，1=生成中，2=成功，3=失败",
+            "example": 2
+          },
+          "progress": {
+            "type": "integer",
+            "description": "进度百分比",
+            "example": 100
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间",
+            "example": "2026-05-05T10:00:00"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "完成时间",
+            "example": "2026-05-05T10:05:30"
+          }
+        }
+      },
+      "AvatarItem": {
+        "type": "object",
+        "description": "数字人信息",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "数字人唯一标识（文件夹名）",
+            "example": "asuka"
+          },
+          "name": {
+            "type": "string",
+            "description": "数字人名称",
+            "example": "asuka"
+          },
+          "thumbnail": {
+            "type": "string",
+            "description": "缩略图URL",
+            "example": "/avatar/asuka/asuka.png"
+          },
+          "videos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "参考视频文件名列表",
+            "example": ["asuka_demo.mp4"]
+          }
+        }
+      },
+      "UploadAudioResult": {
+        "type": "object",
+        "description": "音频上传结果",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "可访问的资源路径",
+            "example": "/uploads/audio/20260505/1746420000000_audio.wav"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "原始文件名",
+            "example": "audio.wav"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "description": "文件大小（字节）",
+            "example": 1048576
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "错误响应",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "example": -1
+          },
+          "msg": {
+            "type": "string",
+            "example": "错误信息"
+          },
+          "data": {
+            "type": "object",
+            "nullable": true,
+            "example": null
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT Token，在请求头中传递：`Authorization: Bearer <token>`"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "用户认证",
+      "description": "用户注册和登录接口"
+    },
+    {
+      "name": "AI任务管理",
+      "description": "AI任务创建、查询、结果获取、SSE订阅接口"
+    },
+    {
+      "name": "数字人管理",
+      "description": "获取可用的数字人列表"
+    },
+    {
+      "name": "文件上传",
+      "description": "音频等文件的上传接口"
+    }
+  ]
+}

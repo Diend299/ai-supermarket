@@ -45,12 +45,14 @@ build/
 # ====================
 .task_progress.md
 .vite/
-api-docs.json
+
 
 # ====================
 # AI Worker - 具体 AI 任务处理代码（不上传）
 # ====================
 ai-worker/avatar_generate/
 ai-worker/text2text/_pycache_/
-ai-worker/avtar/
+ai-worker/avatar/
 ai-worker/uploads/
+ai-worker/GPT-SoVITS-v2pro/
+ai-worker/GPT-SoVITS-v2pro/*.*
